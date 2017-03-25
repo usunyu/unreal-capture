@@ -23,14 +23,20 @@ ACapturePawn::ACapturePawn()
     // Create and position a mesh component so we can see where our sphere is
     UStaticMeshComponent* SphereVisual = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("VisualRepresentation"));
     SphereVisual->SetupAttachment(RootComponent);
-    // Create capture component and setup render target
+    // Create capture component
     CaptureComponent = CreateDefaultSubobject<USceneCaptureComponent2D>(TEXT("CaptureComponent"));
     CaptureComponent->SetupAttachment(RootComponent);
     CaptureComponent->UpdateBounds();
+    CaptureComponent->CaptureSource = SCS_FinalColorLDR;
+    // Setup render texture target
     CaptureComponent->TextureTarget = NewObject<UTextureRenderTarget2D>();
+    CaptureComponent->TextureTarget->ClearColor = FLinearColor::Black;
     CaptureComponent->TextureTarget->InitCustomFormat(FrameWidth, FrameHeight, PF_B8G8R8A8, true);
     CaptureComponent->TextureTarget->bHDR = 0;
-    CaptureComponent->CaptureSource = SCS_FinalColorLDR;
+    CaptureComponent->TextureTarget->TargetGamma = 0.9;
+    CaptureComponent->TextureTarget->CompressionNoAlpha = true;
+    CaptureComponent->TextureTarget->CompressionSettings = TC_VectorDisplacementmap;
+    CaptureComponent->TextureTarget->MipGenSettings = TMGS_NoMipmaps;
 }
 
 // Called when the game starts or when spawned
@@ -62,7 +68,11 @@ void ACapturePawn::Screenshot() {
     // Read pixels
     TArray<FColor> PixelData;
     FReadSurfaceDataFlags ReadSurfaceDataFlags;
+    ReadSurfaceDataFlags.SetLinearToGamma(false);
     RenderTarget->ReadPixels (PixelData, ReadSurfaceDataFlags, FIntRect (0, 0, FrameWidth, FrameHeight));
+//    for (FColor& color : PixelData) {
+//        color.A = 255;
+//    }
     // Save image
     FIntPoint DestSize(FrameWidth, FrameHeight);
     TArray<uint8> CompressedBitmap;
