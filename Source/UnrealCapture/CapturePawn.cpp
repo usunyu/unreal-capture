@@ -26,6 +26,11 @@ ACapturePawn::ACapturePawn()
     // Create capture component and setup render target
     CaptureComponent = CreateDefaultSubobject<USceneCaptureComponent2D>(TEXT("CaptureComponent"));
     CaptureComponent->SetupAttachment(RootComponent);
+    CaptureComponent->UpdateBounds();
+    CaptureComponent->TextureTarget = NewObject<UTextureRenderTarget2D>();
+    CaptureComponent->TextureTarget->InitCustomFormat(FrameWidth, FrameHeight, PF_B8G8R8A8, true);
+    CaptureComponent->TextureTarget->bHDR = 0;
+    CaptureComponent->CaptureSource = SCS_FinalColorLDR;
 }
 
 // Called when the game starts or when spawned

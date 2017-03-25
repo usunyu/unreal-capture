@@ -29,7 +29,7 @@ private:
     // Frame height
     int32 FrameHeight;
 	
-    UPROPERTY(EditAnywhere)
+//    UPROPERTY(EditAnywhere)
     USceneCaptureComponent2D* CaptureComponent;
     
     void Screenshot();
