@@ -45,6 +45,13 @@ ACapturePawn::ACapturePawn()
     CaptureComponent->TextureTarget->CompressionNoAlpha = true;
     CaptureComponent->TextureTarget->CompressionSettings = TC_VectorDisplacementmap;
     CaptureComponent->TextureTarget->MipGenSettings = TMGS_NoMipmaps;
+    
+//    TArray<FColor> BlankImage;
+//	BlankImage.Empty(FrameWidth * FrameHeight);
+//	// Allocate the frames once, allocation can be very slow
+//	for (int32 i = 0; PixelImages() < FramesMax && i < FramesMax; i++) {
+//		PixelImages.Add(BlankImage);
+//	}
 }
 
 // Called when the game starts or when spawned
@@ -58,18 +65,39 @@ void ACapturePawn::BeginPlay()
 void ACapturePawn::Tick( float DeltaTime )
 {
 	Super::Tick( DeltaTime );
-    // Normal: ~70fps, ~13ms
 
     if (ReadPixelsTimeWaited < 1.0f) {
 		ReadPixelsTimeWaited += DeltaTime;
 		return;
 	}
 
-    // ReadPixels: ~24fps, ~47ms
-    //ReadPixels();
+    if (bWaitingOnPixelData) {
+		if (bPixelDataReady) {
+            if (PixelImages.Num() < 1) {
+                PixelImages.Add(PixelData);
+            } else {
+                PixelImages[0] = PixelData;
+            }
+
+			bWaitingOnPixelData = false;
+			bPixelDataReady = false;
+		}
+	}
     
     if (!bWaitingOnPixelData) {
+        // No ReadPixels stats:
+        // FPS:     ~70fps
+        // Frame:   ~13ms
+    
+        // ReadPixelsAsync stats:
+        // FPS:     ~30fps
+        // Frame:   ~30ms
         ReadPixelsAsync();
+
+        // ReadPixels stats:
+        // FPS:     ~24fps
+        // Frame:   ~40ms
+//        ReadPixels();
     }
 }
 
@@ -90,7 +118,6 @@ void ACapturePawn::Screenshot() {
     FRenderTarget* RenderTarget =
         CaptureComponent->TextureTarget->GameThread_GetRenderTargetResource ();
     // Read pixels
-    TArray<FColor> PixelData;
     FReadSurfaceDataFlags ReadSurfaceDataFlags;
     ReadSurfaceDataFlags.SetLinearToGamma(false);
     RenderTarget->ReadPixels(
@@ -112,22 +139,25 @@ void ACapturePawn::ReadPixels() {
     FRenderTarget* RenderTarget =
         CaptureComponent->TextureTarget->GameThread_GetRenderTargetResource();
     FReadSurfaceDataFlags ReadSurfaceDataFlags;
-    TArray<FColor> PixelData;
     RenderTarget->ReadPixels (
         PixelData,
         ReadSurfaceDataFlags,
         FIntRect (0, 0, FrameWidth, FrameHeight));
-    // TODO, push pixel data to video
+    
+    bWaitingOnPixelData = true;
+    bPixelDataReady = true;
 }
 
 void ACapturePawn::ReadPixelsAsync() {
+
+//    GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TEXT("ReadPixelsAsync Begin"));
+
     FRenderTarget* RenderTarget =
         CaptureComponent->TextureTarget->GameThread_GetRenderTargetResource();
     FIntRect InRect(0, 0, RenderTarget->GetSizeXY().X, RenderTarget->GetSizeXY().Y);
     
-    TArray<FColor> PixelData;
     PixelData.Empty(RenderTarget->GetSizeXY().X * RenderTarget->GetSizeXY().Y);
-//    PixelData.Reset();
+    PixelData.Reset();
     FReadSurfaceDataFlags InFlags(RCM_UNorm, CubeFace_MAX);
     
     // Read the render target surface data back.
@@ -164,7 +194,7 @@ void ACapturePawn::ReadPixelsAsync() {
         }
     );
     
-    GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TEXT("ReadPixelsAsync Finish"));
+//    GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TEXT("ReadPixelsAsync Finish"));
     
     bWaitingOnPixelData = true;
 }

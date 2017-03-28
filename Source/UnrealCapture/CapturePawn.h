@@ -35,6 +35,8 @@ private:
     void Screenshot();
     
     float ReadPixelsTimeWaited;
+    TArray<TArray<FColor>> PixelImages;
+    TArray<FColor> PixelData;
     void ReadPixels();
     void ReadPixelsAsync();
     
