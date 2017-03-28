@@ -33,6 +33,11 @@ private:
     USceneCaptureComponent2D* CaptureComponent;
     
     void Screenshot();
+    
+    float ReadPixelsTimeWaited;
     void ReadPixels();
     void ReadPixelsAsync();
+    
+    bool bPixelDataReady;
+    bool bWaitingOnPixelData;
 };
