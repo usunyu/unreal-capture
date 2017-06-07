@@ -42,4 +42,6 @@ private:
     
     bool bPixelDataReady;
     bool bWaitingOnPixelData;
+
+	FString GetGameDir();
 };

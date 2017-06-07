@@ -1,6 +1,11 @@
 # UnrealCapture
 Unreal Capture Functionality Explorer
 
+##### Capture Image:
+Press ```Space``` to capture screenshot.
+
+```Stat FPS``` in command console to show FPS info. 
+
 ```RenderTarget->ReadPixels``` and ```ENQUEUE_UNIQUE_RENDER_COMMAND_ONEPARAMETER``` Performance Test
 
 Test machine:

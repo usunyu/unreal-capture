@@ -58,7 +58,19 @@ ACapturePawn::ACapturePawn()
 void ACapturePawn::BeginPlay()
 {
 	Super::BeginPlay();
-	
+
+	// Create directory
+	IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
+	FString Dir = GetGameDir();
+	// Directory Exists?
+	if (!PlatformFile.DirectoryExists(*Dir))
+	{
+		PlatformFile.CreateDirectory(*Dir);
+		if (!PlatformFile.DirectoryExists(*Dir))
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Create directory failed"));
+		}
+	}
 }
 
 // Called every frame
@@ -130,7 +142,8 @@ void ACapturePawn::Screenshot() {
     FImageUtils::CompressImageArray(
         DestSize.X, DestSize.Y,
         PixelData, CompressedBitmap);
-    FString Filename = "/Users/sun/Desktop/Screenshot.png"; // Your save file path
+	// Save file path
+	FString Filename = GetGameDir() + "Screenshot.png";
     FFileHelper::SaveArrayToFile(CompressedBitmap, *Filename);
 }
 
@@ -197,4 +210,10 @@ void ACapturePawn::ReadPixelsAsync() {
 //    GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TEXT("ReadPixelsAsync Finish"));
     
     bWaitingOnPixelData = true;
+}
+
+FString ACapturePawn::GetGameDir()
+{
+	FString Path = FPaths::ConvertRelativePathToFull(FPaths::GameDir());
+	return Path + "Capture/";
 }
