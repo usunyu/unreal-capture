@@ -1,7 +1,7 @@
 # UnrealCapture
 Unreal Capture Functionality Explorer
 
-#### Capture Image:
+#### Screenshot Capture:
 1. Press ```Space``` to capture screenshot.
 
 2. ```Stat FPS``` in command console to show FPS info. 
@@ -24,3 +24,6 @@ FPS: ~24fps, Frame: ~40ms
 ENQUEUE_UNIQUE_RENDER_COMMAND_ONEPARAMETER
 FPS: ~30fps, Frame: ~30ms
 ```
+
+#### Audio Capture:
+
