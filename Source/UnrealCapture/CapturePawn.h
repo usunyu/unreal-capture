@@ -23,6 +23,27 @@ public:
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* InputComponent) override;
 
+    // Called in several places to guarantee the life of the Actor is coming to an end
+    virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
+    // Import DLL
+    static bool ImportDLL(FString folder, FString name);
+
+    // Import initialize method
+    static bool ImportMethodInitialize();
+
+    // Import audioEncoding method
+    static bool ImportMethodAudioEncoding();
+
+    // Import stopEncoding method
+    static bool ImportMethodStopEncoding();
+
+    // Import releaseLibResources method
+    static bool ImportMethodReleaseLibResources();
+
+    // Free DLL
+    static void FreeDLL();
+
 private:
     // Frame width
     int32 FrameWidth;
@@ -31,7 +52,10 @@ private:
 	
 //    UPROPERTY(EditAnywhere)
     USceneCaptureComponent2D* CaptureComponent;
-    
+
+	FString GetGameDir();
+
+    // Screenshot
     void Screenshot();
     
     float ReadPixelsTimeWaited;
@@ -42,6 +66,4 @@ private:
     
     bool bPixelDataReady;
     bool bWaitingOnPixelData;
-
-	FString GetGameDir();
 };

@@ -6,6 +6,21 @@
 #include "Misc/FileHelper.h"
 #include "HighResScreenshot.h"
 
+#include <thread>
+
+// AudioCaptureLib DLL
+typedef void(*_getInitialize)(); // Declare a method to store the DLL method initialize.
+typedef void(*_getAudioEncoding)(); // Declare a method to store the DLL method audioEncoding.
+typedef void(*_getStopEncoding)(); // Declare a method to store the DLL method stopEncoding.
+typedef void(*_getReleaseLibResources)(); // Declare a method to store the DLL method releaseLibResources.
+
+_getInitialize m_getInitializeFromDll;
+_getAudioEncoding m_getAudioEncodingFromDll;
+_getStopEncoding m_getStopEncodingFromDll;
+_getReleaseLibResources m_getReleaseLibResourcesFromDll;
+
+void *v_dllHandle;
+
 // Sets default values
 ACapturePawn::ACapturePawn()
 {
@@ -71,12 +86,44 @@ void ACapturePawn::BeginPlay()
 			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Create directory failed"));
 		}
 	}
+
+    // Import DLL
+    if (ImportDLL("AudioCapturePlugin", "AudioCaptureLib.dll"))
+    {
+        GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TEXT("Load dll success"));
+    }
+    else
+    {
+        GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Load dll fail"));
+    }
+
+    // Import DLL methods
+    ImportMethodInitialize();
+    ImportMethodAudioEncoding();
+    ImportMethodStopEncoding();
+    ImportMethodReleaseLibResources();
+
+    m_getInitializeFromDll();
 }
+
+//int i = 0;
 
 // Called every frame
 void ACapturePawn::Tick( float DeltaTime )
 {
 	Super::Tick( DeltaTime );
+    /*i++;
+    if (i >= 100 && i < 600)
+    {
+        GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, TEXT("AudioEncoding " + i));
+        m_getAudioEncodingFromDll();
+    }
+
+    if (i == 600)
+    {
+        m_getStopEncodingFromDll();
+        m_getReleaseLibResourcesFromDll();
+    }*/
 
     if (ReadPixelsTimeWaited < 1.0f) {
 		ReadPixelsTimeWaited += DeltaTime;
@@ -122,6 +169,18 @@ void ACapturePawn::SetupPlayerInputComponent(class UInputComponent* InputCompone
         "Screenshot",
         IE_Pressed, this,
         &ACapturePawn::Screenshot);
+}
+
+// Called in several places to guarantee the life of the Actor is coming to an end
+void ACapturePawn::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+    FreeDLL();
+}
+
+FString ACapturePawn::GetGameDir()
+{
+	FString Path = FPaths::ConvertRelativePathToFull(FPaths::GameDir());
+	return Path + "Capture/";
 }
 
 void ACapturePawn::Screenshot() {
@@ -212,8 +271,98 @@ void ACapturePawn::ReadPixelsAsync() {
     bWaitingOnPixelData = true;
 }
 
-FString ACapturePawn::GetGameDir()
+// Method to import a DLL
+bool ACapturePawn::ImportDLL(FString folder, FString name)
 {
-	FString Path = FPaths::ConvertRelativePathToFull(FPaths::GameDir());
-	return Path + "Capture/";
+    FString filePath = *FPaths::GamePluginsDir() + folder + "/" + name;
+
+    if (FPaths::FileExists(filePath))
+    {
+        v_dllHandle = FPlatformProcess::GetDllHandle(*filePath); // Retrieve the DLL.
+        if (v_dllHandle != NULL)
+        {
+            return true;
+        }
+    }
+    return false;	// Return an error.
+}
+
+// Imports the method initialize from the DLL.
+bool ACapturePawn::ImportMethodInitialize()
+{
+    if (v_dllHandle != NULL)
+    {
+        m_getInitializeFromDll = NULL;
+        FString procName = "initialize";	// Needs to be the exact name of the DLL method.
+        m_getInitializeFromDll = (_getInitialize)FPlatformProcess::GetDllExport(v_dllHandle, *procName);
+        if (m_getInitializeFromDll != NULL)
+        {
+            return true;
+        }
+    }
+    return false;	// Return an error.
+}
+
+// Imports the method audioEncoding from the DLL.
+bool ACapturePawn::ImportMethodAudioEncoding()
+{
+    if (v_dllHandle != NULL)
+    {
+        m_getAudioEncodingFromDll = NULL;
+        FString procName = "audioEncoding";	// Needs to be the exact name of the DLL method.
+        m_getAudioEncodingFromDll = (_getAudioEncoding)FPlatformProcess::GetDllExport(v_dllHandle, *procName);
+        if (m_getInitializeFromDll != NULL)
+        {
+            return true;
+        }
+    }
+    return false;	// Return an error.
+}
+
+// Imports the method stopEncoding from the DLL.
+bool ACapturePawn::ImportMethodStopEncoding()
+{
+    if (v_dllHandle != NULL)
+    {
+        m_getStopEncodingFromDll = NULL;
+        FString procName = "audioEncoding";	// Needs to be the exact name of the DLL method.
+        m_getStopEncodingFromDll = (_getStopEncoding)FPlatformProcess::GetDllExport(v_dllHandle, *procName);
+        if (m_getInitializeFromDll != NULL)
+        {
+            return true;
+        }
+    }
+    return false;	// Return an error.
+}
+
+// Imports the method releaseLibResources from the DLL.
+bool ACapturePawn::ImportMethodReleaseLibResources()
+{
+    if (v_dllHandle != NULL)
+    {
+        m_getReleaseLibResourcesFromDll = NULL;
+        FString procName = "audioEncoding";	// Needs to be the exact name of the DLL method.
+        m_getReleaseLibResourcesFromDll = (_getReleaseLibResources)FPlatformProcess::GetDllExport(v_dllHandle, *procName);
+        if (m_getInitializeFromDll != NULL)
+        {
+            return true;
+        }
+    }
+    return false;	// Return an error.
+}
+
+// If you love something  set it free.
+void ACapturePawn::FreeDLL()
+{
+    if (v_dllHandle != NULL)
+    {
+        //m_getInvertedBoolFromDll = NULL;
+        //m_getIntPlusPlusFromDll = NULL;
+        //m_getCircleAreaFromDll = NULL;
+        //m_getCharArrayFromDll = NULL;
+        //m_getVector4FromDll = NULL;
+
+        FPlatformProcess::FreeDllHandle(v_dllHandle);
+        v_dllHandle = NULL;
+    }
 }
