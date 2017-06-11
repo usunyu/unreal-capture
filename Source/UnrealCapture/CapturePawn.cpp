@@ -67,25 +67,29 @@ ACapturePawn::ACapturePawn()
 //	for (int32 i = 0; PixelImages() < FramesMax && i < FramesMax; i++) {
 //		PixelImages.Add(BlankImage);
 //	}
+
+    // Audio capture vars
+    bAudioCaptureStart = false;
+    bAudioCaptureNeedStop = false;
 }
 
 // Called when the game starts or when spawned
 void ACapturePawn::BeginPlay()
 {
-	Super::BeginPlay();
+    Super::BeginPlay();
 
-	// Create directory
-	IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
-	FString Dir = GetGameDir();
-	// Directory Exists?
-	if (!PlatformFile.DirectoryExists(*Dir))
-	{
-		PlatformFile.CreateDirectory(*Dir);
-		if (!PlatformFile.DirectoryExists(*Dir))
-		{
-			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Create directory failed"));
-		}
-	}
+    // Create directory
+    IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
+    FString Dir = GetGameDir();
+    // Directory Exists?
+    if (!PlatformFile.DirectoryExists(*Dir))
+    {
+        PlatformFile.CreateDirectory(*Dir);
+        if (!PlatformFile.DirectoryExists(*Dir))
+        {
+            GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Create directory failed"));
+        }
+    }
 
     // Import DLL
     if (ImportDLL("AudioCapturePlugin", "AudioCaptureLib.dll"))
@@ -98,38 +102,63 @@ void ACapturePawn::BeginPlay()
     }
 
     // Import DLL methods
-    ImportMethodInitialize();
-    ImportMethodAudioEncoding();
-    ImportMethodStopEncoding();
-    ImportMethodReleaseLibResources();
+    if (ImportMethodInitialize())
+    {
+        GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TEXT("Import method initialize success"));
+    }
+    else {
+        GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Import method initialize fail"));
+    }
+    if (ImportMethodAudioEncoding())
+    {
+        GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TEXT("Import method audioEncoding success"));
+    }
+    else
+    {
+        GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Import method audioEncoding fail"));
+    }
+    if (ImportMethodStopEncoding())
+    {
+        GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TEXT("Import method stopEncoding success"));
+    }
+    else
+    {
+        GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Import method stopEncoding fail"));
+    }
+    if (ImportMethodReleaseLibResources())
+    {
+        GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TEXT("Import method releaseLibResources success"));
+    }
+    else
+    {
+        GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Import method releaseLibResources fail"));
+    }
 
     m_getInitializeFromDll();
 }
-
-//int i = 0;
 
 // Called every frame
 void ACapturePawn::Tick( float DeltaTime )
 {
 	Super::Tick( DeltaTime );
-    /*i++;
-    if (i >= 100 && i < 600)
+
+    // Audio capture
+    if (bAudioCaptureStart)
     {
-        GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, TEXT("AudioEncoding " + i));
         m_getAudioEncodingFromDll();
     }
-
-    if (i == 600)
+    if (bAudioCaptureNeedStop)
     {
         m_getStopEncodingFromDll();
-        m_getReleaseLibResourcesFromDll();
-    }*/
+        bAudioCaptureNeedStop = false;
+    }
 
     if (ReadPixelsTimeWaited < 1.0f) {
 		ReadPixelsTimeWaited += DeltaTime;
 		return;
 	}
 
+    // Screenshot
     if (bWaitingOnPixelData) {
 		if (bPixelDataReady) {
             if (PixelImages.Num() < 1) {
@@ -169,11 +198,17 @@ void ACapturePawn::SetupPlayerInputComponent(class UInputComponent* InputCompone
         "Screenshot",
         IE_Pressed, this,
         &ACapturePawn::Screenshot);
+
+    InputComponent->BindAction(
+        "AudioCapture",
+        IE_Pressed, this,
+        &ACapturePawn::AudioCapture);
 }
 
 // Called in several places to guarantee the life of the Actor is coming to an end
 void ACapturePawn::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+    Super::EndPlay(EndPlayReason);
     FreeDLL();
 }
 
@@ -311,7 +346,7 @@ bool ACapturePawn::ImportMethodAudioEncoding()
         m_getAudioEncodingFromDll = NULL;
         FString procName = "audioEncoding";	// Needs to be the exact name of the DLL method.
         m_getAudioEncodingFromDll = (_getAudioEncoding)FPlatformProcess::GetDllExport(v_dllHandle, *procName);
-        if (m_getInitializeFromDll != NULL)
+        if (m_getAudioEncodingFromDll != NULL)
         {
             return true;
         }
@@ -325,9 +360,9 @@ bool ACapturePawn::ImportMethodStopEncoding()
     if (v_dllHandle != NULL)
     {
         m_getStopEncodingFromDll = NULL;
-        FString procName = "audioEncoding";	// Needs to be the exact name of the DLL method.
+        FString procName = "stopEncoding";	// Needs to be the exact name of the DLL method.
         m_getStopEncodingFromDll = (_getStopEncoding)FPlatformProcess::GetDllExport(v_dllHandle, *procName);
-        if (m_getInitializeFromDll != NULL)
+        if (m_getStopEncodingFromDll != NULL)
         {
             return true;
         }
@@ -341,9 +376,9 @@ bool ACapturePawn::ImportMethodReleaseLibResources()
     if (v_dllHandle != NULL)
     {
         m_getReleaseLibResourcesFromDll = NULL;
-        FString procName = "audioEncoding";	// Needs to be the exact name of the DLL method.
+        FString procName = "releaseLibResources";	// Needs to be the exact name of the DLL method.
         m_getReleaseLibResourcesFromDll = (_getReleaseLibResources)FPlatformProcess::GetDllExport(v_dllHandle, *procName);
-        if (m_getInitializeFromDll != NULL)
+        if (m_getReleaseLibResourcesFromDll != NULL)
         {
             return true;
         }
@@ -354,15 +389,34 @@ bool ACapturePawn::ImportMethodReleaseLibResources()
 // If you love something  set it free.
 void ACapturePawn::FreeDLL()
 {
+    m_getReleaseLibResourcesFromDll();
+
     if (v_dllHandle != NULL)
     {
-        //m_getInvertedBoolFromDll = NULL;
-        //m_getIntPlusPlusFromDll = NULL;
-        //m_getCircleAreaFromDll = NULL;
-        //m_getCharArrayFromDll = NULL;
-        //m_getVector4FromDll = NULL;
+        m_getInitializeFromDll = NULL;
+        m_getAudioEncodingFromDll = NULL;
+        m_getStopEncodingFromDll = NULL;
+        m_getReleaseLibResourcesFromDll = NULL;
 
         FPlatformProcess::FreeDllHandle(v_dllHandle);
         v_dllHandle = NULL;
+    }
+}
+
+void ACapturePawn::AudioCapture()
+{
+    if (bAudioCaptureStart)
+    {
+        // Stop audio capture
+        bAudioCaptureStart = false;
+        bAudioCaptureNeedStop = true;
+        GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TEXT("Stop audio encoding"));
+    }
+    else
+    {
+        // Start audio capture
+        bAudioCaptureStart = true;
+        bAudioCaptureNeedStop = false;
+        GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TEXT("Start audio encoding"));
     }
 }

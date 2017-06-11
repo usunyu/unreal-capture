@@ -50,7 +50,7 @@ private:
     // Frame height
     int32 FrameHeight;
 	
-//    UPROPERTY(EditAnywhere)
+    UPROPERTY(EditAnywhere)
     USceneCaptureComponent2D* CaptureComponent;
 
 	FString GetGameDir();
@@ -66,4 +66,10 @@ private:
     
     bool bPixelDataReady;
     bool bWaitingOnPixelData;
+
+    // Audio capture
+    bool bAudioCaptureStart;
+    bool bAudioCaptureNeedStop;
+
+    void AudioCapture();
 };

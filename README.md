@@ -1,6 +1,11 @@
 # UnrealCapture
 Unreal Capture Functionality Explorer
 
+#### Unreal Engine Version:
+```
+4.14.3
+```
+
 #### Screenshot Capture:
 1. Press ```Space``` to capture screenshot.
 
@@ -26,4 +31,6 @@ FPS: ~30fps, Frame: ~30ms
 ```
 
 #### Audio Capture:
+1. Press ```A``` to start/stop audio capture.
 
+2. If run in editor mode, captured audio will be saved in ```../Epic Games/UE_4.13/Engine/Binaries/WinXX```
