@@ -1,4 +1,4 @@
-# UnrealCapture
+# unreal-capture
 Unreal Capture Functionality Explorer
 
 #### Unreal Engine Version:
